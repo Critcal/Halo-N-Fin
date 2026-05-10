@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
-signal player_died
+signal player_died(enemy_defeat: bool)
+signal health_changed(current: int, maximum: int)
 
 @export var speed: float = 240.0
 @export var run_speed_multiplier: float = 1.5
@@ -8,7 +9,7 @@ signal player_died
 @export var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
 @export var attack_duration: float = 0.28
 @export var stomp_bounce_velocity: float = -320.0
-@export var max_hp: int = 3
+@export var max_hp: int = 5
 @export var power_jump_bonus: float = 260.0
 @export var max_charge_time: float = 3.0
 
@@ -24,11 +25,12 @@ var is_attacking := false
 var attack_timer := 0.0
 var is_crouching := false
 var charge_time := 0.0
-var hp := 3
+var hp := 5
 var hurt_cooldown := 0.0
 var attack_targets_hit: Dictionary = {}
 var attack_landed := false
 var landed_punch_count := 0
+var is_dying := false
 
 func _ready() -> void:
 	hp = max_hp
@@ -38,8 +40,14 @@ func _ready() -> void:
 	sprite.animation = "walk"
 	sprite.frame = 0
 	attack_shape.disabled = true
+	health_changed.emit(hp, max_hp)
 
 func _physics_process(delta: float) -> void:
+	if is_dying:
+		velocity.y += gravity * delta
+		move_and_slide()
+		return
+
 	if hurt_cooldown > 0.0:
 		hurt_cooldown -= delta
 
@@ -57,7 +65,10 @@ func _physics_process(delta: float) -> void:
 		is_crouching = true
 		charge_time = min(charge_time + delta, max_charge_time)
 		velocity.x = move_toward(velocity.x, 0.0, current_speed)
-		sprite.play("crouch")
+		if charge_time < 0.3 and sprite.sprite_frames.has_animation("crouch_down"):
+			sprite.play("crouch_down")
+		else:
+			sprite.play("crouch_hold")
 	elif is_crouching:
 		is_crouching = false
 		if is_on_floor() and charge_time >= max_charge_time:
@@ -106,15 +117,27 @@ func _physics_process(delta: float) -> void:
 	_handle_attack_hits()
 
 	if global_position.y > 1200.0:
-		emit_signal("player_died")
+		player_died.emit(false)
 
 func take_hit() -> void:
-	if hurt_cooldown > 0.0:
+	if hurt_cooldown > 0.0 or is_dying:
 		return
 	hp -= 1
 	hurt_cooldown = 0.5
+	health_changed.emit(hp, max_hp)
 	if hp <= 0:
-		emit_signal("player_died")
+		die_from_enemy()
+
+func die_from_enemy() -> void:
+	if is_dying:
+		return
+	is_dying = true
+	velocity = Vector2.ZERO
+	attack_shape.disabled = true
+	if sprite.sprite_frames.has_animation("death"):
+		sprite.play("death")
+		await get_tree().create_timer(0.65).timeout
+	player_died.emit(true)
 
 func reset_for_respawn() -> void:
 	hp = max_hp
@@ -126,6 +149,8 @@ func reset_for_respawn() -> void:
 	attack_shape.disabled = true
 	attack_targets_hit.clear()
 	attack_landed = false
+	is_dying = false
+	health_changed.emit(hp, max_hp)
 
 func _setup_input_map() -> void:
 	_bind_action_key("move_left", KEY_LEFT)
@@ -134,13 +159,6 @@ func _setup_input_map() -> void:
 	_bind_action_key("attack", KEY_SPACE)
 	_bind_action_key("crouch", KEY_DOWN)
 	_bind_action_key("run", KEY_SHIFT)
-	_bind_joy_button("jump", JOY_BUTTON_A)
-	_bind_joy_button("attack", JOY_BUTTON_X)
-	_bind_joy_button("crouch", JOY_BUTTON_DPAD_DOWN)
-	_bind_joy_button("run", JOY_BUTTON_LEFT_SHOULDER)
-	_bind_joy_button("run", JOY_BUTTON_RIGHT_SHOULDER)
-	_bind_joy_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
-	_bind_joy_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
 
 func _bind_action_key(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
@@ -153,61 +171,54 @@ func _bind_action_key(action: String, keycode: Key) -> void:
 	key_event.physical_keycode = keycode
 	InputMap.action_add_event(action, key_event)
 
-func _bind_joy_button(action: String, button: JoyButton) -> void:
-	for event in InputMap.action_get_events(action):
-		if event is InputEventJoypadButton and event.button_index == button:
-			return
-	var joy_event := InputEventJoypadButton.new()
-	joy_event.button_index = button
-	InputMap.action_add_event(action, joy_event)
-
-func _bind_joy_axis(action: String, axis: JoyAxis, axis_value: float) -> void:
-	for event in InputMap.action_get_events(action):
-		if event is InputEventJoypadMotion and event.axis == axis and is_equal_approx(event.axis_value, axis_value):
-			return
-	var motion_event := InputEventJoypadMotion.new()
-	motion_event.axis = axis
-	motion_event.axis_value = axis_value
-	InputMap.action_add_event(action, motion_event)
-
 func _setup_frames() -> void:
 	var frames := SpriteFrames.new()
-	for anim in ["walk", "run", "jump", "attack", "crouch", "power_jump"]:
+	for anim in ["walk", "run", "jump", "attack", "crouch_down", "crouch_hold", "power_jump", "death"]:
 		frames.add_animation(anim)
 	frames.set_animation_speed("walk", 12.0)
 	frames.set_animation_speed("run", 14.0)
 	frames.set_animation_speed("jump", 12.0)
 	frames.set_animation_speed("attack", 14.0)
-	frames.set_animation_speed("crouch", 8.0)
+	frames.set_animation_speed("crouch_down", 10.0)
+	frames.set_animation_speed("crouch_hold", 8.0)
 	frames.set_animation_speed("power_jump", 12.0)
+	frames.set_animation_speed("death", 10.0)
 	frames.set_animation_loop("walk", true)
 	frames.set_animation_loop("run", true)
 	frames.set_animation_loop("jump", false)
 	frames.set_animation_loop("attack", false)
-	frames.set_animation_loop("crouch", true)
+	frames.set_animation_loop("crouch_down", false)
+	frames.set_animation_loop("crouch_hold", true)
 	frames.set_animation_loop("power_jump", false)
+	frames.set_animation_loop("death", false)
 
 	var walk_tex := _load_first(["res://assets/finn_walk_strip.png"])
-	var run_tex := _load_first(["res://assets/finn_run_strip.png", "res://assets/finn_running_strip.png"])
+	var run_tex := _load_first(["res://assets/finn_run_strip.png"])
 	var jump_tex := _load_first(["res://assets/finn_jump_strip.png"])
-	var attack_tex := _load_first(["res://assets/finn_attack_strip.png", "res://assets/finn_punch_strip.png"])
-	var crouch_tex := _load_first(["res://assets/finn_crouch_strip.png"])
-	var power_jump_tex := _load_first(["res://assets/finn_power_jump_strip.png"])
+	var attack_tex := _load_first(["res://assets/finn_attack_strip.png"])
+	var crouch_down_tex := _load_first(["res://assets/finn_crouching.png"])
+	var crouch_hold_tex := _load_first(["res://assets/finn_crouch.png"])
+	var power_jump_tex := _load_first(["res://assets/finn_power_jump.png"])
+	var death_tex := _load_first(["res://assets/Finn_death.png"])
 
 	if walk_tex != null:
-		_add_grid_frames(frames, "walk", walk_tex, 8, 1, 8)
+		_add_grid_frames(frames, "walk", walk_tex, 8, 8)
 	if run_tex != null:
-		_add_grid_frames(frames, "run", run_tex, 8, 1, 8)
+		_add_grid_frames(frames, "run", run_tex, 8, 8)
 	elif walk_tex != null:
-		_add_grid_frames(frames, "run", walk_tex, 8, 1, 8)
+		_add_grid_frames(frames, "run", walk_tex, 8, 8)
 	if jump_tex != null:
-		_add_grid_frames(frames, "jump", jump_tex, 7, 1, 7)
+		_add_grid_frames(frames, "jump", jump_tex, 7, 7)
 	if attack_tex != null:
-		_add_grid_frames(frames, "attack", attack_tex, 6, 1, 6)
-	if crouch_tex != null:
-		_add_grid_frames(frames, "crouch", crouch_tex, 4, 1, 4)
+		_add_grid_frames(frames, "attack", attack_tex, 6, 6)
+	if crouch_down_tex != null:
+		_add_grid_frames(frames, "crouch_down", crouch_down_tex, 4, 4)
+	if crouch_hold_tex != null:
+		_add_grid_frames(frames, "crouch_hold", crouch_hold_tex, 4, 4)
 	if power_jump_tex != null:
-		_add_grid_frames(frames, "power_jump", power_jump_tex, 7, 1, 7)
+		_add_grid_frames(frames, "power_jump", power_jump_tex, 7, 7)
+	if death_tex != null:
+		_add_grid_frames(frames, "death", death_tex, 8, 8)
 
 	sprite.sprite_frames = frames
 
@@ -227,9 +238,9 @@ func _load_first(paths: Array[String]) -> Texture2D:
 			return load(p)
 	return null
 
-func _add_grid_frames(frames: SpriteFrames, anim: String, texture: Texture2D, cols: int, rows: int, frame_count: int) -> void:
+func _add_grid_frames(frames: SpriteFrames, anim: String, texture: Texture2D, cols: int, frame_count: int) -> void:
 	var fw := int(texture.get_width() / cols)
-	var fh := int(texture.get_height() / rows)
+	var fh := texture.get_height()
 	for i in range(frame_count):
 		var at := AtlasTexture.new()
 		at.atlas = texture
@@ -270,19 +281,11 @@ func _handle_attack_hits() -> void:
 			body.call_deferred("take_hit", 1)
 			if not attack_landed:
 				attack_landed = true
-				_play_landed_punch_sound()
-
-func _play_landed_punch_sound() -> void:
-	landed_punch_count += 1
-	if hit_sfx.stream == null:
-		return
-	if landed_punch_count % 2 == 0 and ResourceLoader.exists("res://assets/punch_light_hit.mp3"):
-		hit_sfx.stream = load("res://assets/punch_light_hit.mp3")
-	elif ResourceLoader.exists("res://assets/punch_hit.mp3"):
-		hit_sfx.stream = load("res://assets/punch_hit.mp3")
-	hit_sfx.play()
-	if landed_punch_count % 3 == 0:
-		_play_bark()
+				landed_punch_count += 1
+				if hit_sfx.stream != null:
+					hit_sfx.play()
+				if landed_punch_count % 3 == 0:
+					_play_bark()
 
 func _play_jump_sound() -> void:
 	if jump_sfx.stream != null:
