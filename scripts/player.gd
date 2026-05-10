@@ -146,9 +146,10 @@ func _bind_action_key(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
 		InputMap.add_action(action)
 	for event in InputMap.action_get_events(action):
-		if event is InputEventKey and event.physical_keycode == keycode:
-			return
+		if event is InputEventKey:
+			InputMap.action_erase_event(action, event)
 	var key_event := InputEventKey.new()
+	key_event.keycode = keycode
 	key_event.physical_keycode = keycode
 	InputMap.action_add_event(action, key_event)
 

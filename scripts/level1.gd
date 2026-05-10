@@ -11,6 +11,7 @@ extends Node2D
 @onready var sky: Sprite2D = $ParallaxBackground/SkyLayer/Sky
 @onready var neighborhood: Sprite2D = $ParallaxBackground/NeighborhoodLayer/Neighborhood
 @onready var level_music: AudioStreamPlayer = $LevelMusic
+@onready var coin_sfx: AudioStreamPlayer = $CoinSfx
 
 const COIN_SCENE := preload("res://scenes/coin.tscn")
 
@@ -21,6 +22,7 @@ func _ready() -> void:
 	lives = starting_lives
 	player.add_to_group("player")
 	_apply_backgrounds()
+	_setup_audio()
 	_update_hud()
 	player.player_died.connect(_on_player_died)
 	if ResourceLoader.exists("res://assets/Level1.mp3"):
@@ -33,6 +35,12 @@ func _process(_delta: float) -> void:
 	if player.velocity.y < -40.0:
 		target_zoom = Vector2(0.78, 0.78)
 	camera.zoom = camera.zoom.lerp(target_zoom, 0.08)
+
+
+func _setup_audio() -> void:
+	var coin_stream := _load_first(["res://assets/coin_sound.mp3", "res://assets/Coin_Sound.mp3"])
+	if coin_stream != null:
+		coin_sfx.stream = coin_stream
 
 func _apply_backgrounds() -> void:
 	var sky_tex := _load_first(["res://assets/sky.png"])
@@ -50,6 +58,9 @@ func _load_first(paths: Array[String]) -> Texture2D:
 
 func _on_coin_picked() -> void:
 	coins += 1
+	if coin_sfx.stream != null:
+		coin_sfx.stop()
+		coin_sfx.play()
 	if coins >= coin_goal_for_life:
 		coins -= coin_goal_for_life
 		lives += 1
