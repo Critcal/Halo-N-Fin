@@ -216,7 +216,8 @@ func _bind_joy_axis(action: String, axis: JoyAxis, axis_value: float) -> void:
 	InputMap.action_add_event(action, motion_event)
 
 func _update_depth_scale() -> void:
-	var t := inverse_lerp(lane_min_y, lane_max_y, global_position.y)
+	var lane_span := max(lane_max_y - lane_min_y, 0.001)
+	var t := clamp((global_position.y - lane_min_y) / lane_span, 0.0, 1.0)
 	var scale_factor := lerp(0.9, 1.12, t)
 	sprite.scale = base_sprite_scale * scale_factor
 
