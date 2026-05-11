@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/coin.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_coin"]
+radius = 14.0
+
+[node name="Coin" type="Area2D"]
+script = ExtResource("1_script")
+monitoring = true
+monitorable = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_coin")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(1, 0.87, 0.2, 1)
+scale = Vector2(0.45, 0.45)
+
+[node name="CoinVisual" type="Polygon2D" parent="Sprite2D"]
+polygon = PackedVector2Array(-24, 0, -16, -16, 0, -24, 16, -16, 24, 0, 16, 16, 0, 24, -16, 16)
+color = Color(1, 0.84, 0.05, 1)
