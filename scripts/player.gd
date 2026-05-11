@@ -168,13 +168,13 @@ func _setup_input_map() -> void:
 	_bind_action_key("move_right", KEY_RIGHT)
 	_bind_action_key("jump", KEY_CTRL)
 	_bind_action_key("attack", KEY_SPACE)
-	_bind_action_key("crouch", KEY_DOWN)
+	_bind_action_key("crouch", KEY_X)
 	_bind_action_key("run", KEY_SHIFT)
 	_bind_action_key("move_up", KEY_UP)
 	_bind_action_key("move_down", KEY_DOWN)
 	_bind_joy_button("jump", JOY_BUTTON_A)
 	_bind_joy_button("attack", JOY_BUTTON_X)
-	_bind_joy_button("crouch", JOY_BUTTON_DPAD_DOWN)
+	_bind_joy_button("crouch", JOY_BUTTON_B)
 	_bind_joy_button("run", JOY_BUTTON_LEFT_SHOULDER)
 	_bind_joy_button("run", JOY_BUTTON_RIGHT_SHOULDER)
 	_bind_joy_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
@@ -216,7 +216,8 @@ func _bind_joy_axis(action: String, axis: JoyAxis, axis_value: float) -> void:
 	InputMap.action_add_event(action, motion_event)
 
 func _update_depth_scale() -> void:
-	var t := inverse_lerp(lane_min_y, lane_max_y, global_position.y)
+	var lane_span := max(lane_max_y - lane_min_y, 0.001)
+	var t := clamp((global_position.y - lane_min_y) / lane_span, 0.0, 1.0)
 	var scale_factor := lerp(0.9, 1.12, t)
 	sprite.scale = base_sprite_scale * scale_factor
 
