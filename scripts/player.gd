@@ -12,6 +12,9 @@ signal health_changed(current: int, maximum: int)
 @export var max_hp: int = 5
 @export var power_jump_bonus: float = 260.0
 @export var max_charge_time: float = 3.0
+@export var lane_speed: float = 180.0
+@export var lane_min_y: float = 520.0
+@export var lane_max_y: float = 650.0
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var attack_area: Area2D = $AttackArea2D
@@ -31,6 +34,7 @@ var attack_targets_hit: Dictionary = {}
 var attack_landed := false
 var landed_punch_count := 0
 var is_dying := false
+var base_sprite_scale := Vector2(0.35, 0.35)
 
 func _ready() -> void:
 	hp = max_hp
@@ -40,6 +44,7 @@ func _ready() -> void:
 	sprite.animation = "walk"
 	sprite.frame = 0
 	attack_shape.disabled = true
+	base_sprite_scale = sprite.scale
 	health_changed.emit(hp, max_hp)
 
 func _physics_process(delta: float) -> void:
@@ -84,6 +89,12 @@ func _physics_process(delta: float) -> void:
 
 	if attack_pressed and not is_attacking and is_on_floor() and not is_crouching:
 		_start_attack()
+
+
+	var vertical_direction := Input.get_axis("move_up", "move_down")
+	if abs(vertical_direction) > 0.05 and is_on_floor() and not is_crouching and not is_attacking:
+		global_position.y = clamp(global_position.y + vertical_direction * lane_speed * delta, lane_min_y, lane_max_y)
+	_update_depth_scale()
 
 	if direction != 0.0 and not is_crouching:
 		velocity.x = direction * current_speed
@@ -159,6 +170,17 @@ func _setup_input_map() -> void:
 	_bind_action_key("attack", KEY_SPACE)
 	_bind_action_key("crouch", KEY_DOWN)
 	_bind_action_key("run", KEY_SHIFT)
+	_bind_action_key("move_up", KEY_UP)
+	_bind_action_key("move_down", KEY_DOWN)
+	_bind_joy_button("jump", JOY_BUTTON_A)
+	_bind_joy_button("attack", JOY_BUTTON_X)
+	_bind_joy_button("crouch", JOY_BUTTON_DPAD_DOWN)
+	_bind_joy_button("run", JOY_BUTTON_LEFT_SHOULDER)
+	_bind_joy_button("run", JOY_BUTTON_RIGHT_SHOULDER)
+	_bind_joy_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
+	_bind_joy_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
+	_bind_joy_axis("move_up", JOY_AXIS_LEFT_Y, -1.0)
+	_bind_joy_axis("move_down", JOY_AXIS_LEFT_Y, 1.0)
 
 func _bind_action_key(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
@@ -170,6 +192,33 @@ func _bind_action_key(action: String, keycode: Key) -> void:
 	key_event.keycode = keycode
 	key_event.physical_keycode = keycode
 	InputMap.action_add_event(action, key_event)
+
+
+func _bind_joy_button(action: String, button: JoyButton) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton and event.button_index == button:
+			return
+	var joy_event := InputEventJoypadButton.new()
+	joy_event.button_index = button
+	InputMap.action_add_event(action, joy_event)
+
+func _bind_joy_axis(action: String, axis: JoyAxis, axis_value: float) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadMotion and event.axis == axis and is_equal_approx(event.axis_value, axis_value):
+			return
+	var motion_event := InputEventJoypadMotion.new()
+	motion_event.axis = axis
+	motion_event.axis_value = axis_value
+	InputMap.action_add_event(action, motion_event)
+
+func _update_depth_scale() -> void:
+	var t := inverse_lerp(lane_min_y, lane_max_y, global_position.y)
+	var scale_factor := lerp(0.9, 1.12, t)
+	sprite.scale = base_sprite_scale * scale_factor
 
 func _setup_frames() -> void:
 	var frames := SpriteFrames.new()

@@ -50,7 +50,7 @@ func _apply_backgrounds() -> void:
 	var sky_tex := _load_first_texture(["res://assets/sky.png"])
 	if sky_tex != null:
 		sky.texture = sky_tex
-	var n_tex := _load_first_texture(["res://assets/background_level.png", "res://assets/neighborhood.png"])
+	var n_tex := _load_first_texture(["res://assets/neighborhood.png", "res://assets/background_level.png"])
 	if n_tex != null:
 		neighborhood.texture = n_tex
 

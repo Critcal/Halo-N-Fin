@@ -51,7 +51,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			_patrol()
 
-	sprite.flip_h = direction > 0.0
+	sprite.flip_h = direction < 0.0
 	move_and_slide()
 
 func _patrol() -> void:
