@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cxn7m7gjxjq7a"]
+[gd_scene load_steps=11 format=3 uid="uid://cxn7m7gjxjq7a"]
 
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemy_cat.tscn" id="2_enemy"]
@@ -6,6 +6,9 @@
 
 [sub_resource type="RectangleShape2D" id="GroundSolid"]
 size = Vector2(8600, 140)
+
+[sub_resource type="RectangleShape2D" id="PlatformSolid"]
+size = Vector2(320, 34)
 
 [node name="Level1" type="Node2D"]
 script = ExtResource("3_script")
@@ -38,6 +41,58 @@ position = Vector2(3900, 650)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundSolid")
+
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="PlatformA" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1050, 495)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/PlatformA"]
+shape = SubResource("PlatformSolid")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/PlatformA" groups=["platform_sprite_targets"]]
+position = Vector2(0, -20)
+scale = Vector2(0.22, 0.22)
+
+[node name="PlatformB" type="StaticBody2D" parent="Platforms"]
+position = Vector2(2120, 430)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/PlatformB"]
+shape = SubResource("PlatformSolid")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/PlatformB" groups=["platform_sprite_targets"]]
+position = Vector2(0, -20)
+scale = Vector2(0.22, 0.22)
+
+[node name="PlatformC" type="StaticBody2D" parent="Platforms"]
+position = Vector2(3150, 520)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/PlatformC"]
+shape = SubResource("PlatformSolid")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/PlatformC" groups=["platform_sprite_targets"]]
+position = Vector2(0, -20)
+scale = Vector2(0.22, 0.22)
+
+[node name="PlatformD" type="StaticBody2D" parent="Platforms"]
+position = Vector2(4350, 445)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/PlatformD"]
+shape = SubResource("PlatformSolid")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/PlatformD" groups=["platform_sprite_targets"]]
+position = Vector2(0, -20)
+scale = Vector2(0.22, 0.22)
+
+[node name="PlatformE" type="StaticBody2D" parent="Platforms"]
+position = Vector2(5600, 500)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/PlatformE"]
+shape = SubResource("PlatformSolid")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/PlatformE" groups=["platform_sprite_targets"]]
+position = Vector2(0, -20)
+scale = Vector2(0.22, 0.22)
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(220, 590)
@@ -85,27 +140,6 @@ offset_top = 150.0
 text = "Coins: 0"
 
 [node name="Enemies" type="Node2D" parent="."]
-
-[node name="EnemyCatA" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(900, 590)
-
-[node name="EnemyCatB" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(1700, 590)
-
-[node name="EnemyCatC" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(2800, 590)
-
-[node name="EnemyCatD" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(4000, 590)
-
-[node name="EnemyCatE" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(5200, 590)
-
-[node name="EnemyCatF" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(6500, 590)
-
-[node name="EnemyCatG" parent="Enemies" instance=ExtResource("2_enemy")]
-position = Vector2(7400, 590)
 
 [node name="Coins" type="Node2D" parent="."]
 

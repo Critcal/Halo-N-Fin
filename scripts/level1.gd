@@ -16,6 +16,7 @@ extends Node2D
 @onready var coin_sfx: AudioStreamPlayer = $CoinSfx
 
 const COIN_SCENE := preload("res://scenes/coin.tscn")
+const ENEMY_SCENE := preload("res://scenes/enemy_cat.tscn")
 
 var coins: int = 0
 var lives: int = 3
@@ -27,12 +28,14 @@ func _ready() -> void:
 	_setup_audio()
 	_style_hud()
 	_load_head_icon()
+	_setup_platform_visuals()
 	_update_hud()
 	player.player_died.connect(_on_player_died)
 	player.health_changed.connect(_on_health_changed)
 	if ResourceLoader.exists("res://assets/Level1.mp3"):
 		level_music.stream = load("res://assets/Level1.mp3")
 		level_music.play()
+	_spawn_enemies()
 	_spawn_coins()
 
 func _process(_delta: float) -> void:
@@ -116,13 +119,45 @@ func _update_hud() -> void:
 	lives_label.text = "Lives: %d" % lives
 
 func _spawn_coins() -> void:
-	for i in range(100):
+	for child in coins_root.get_children():
+		child.queue_free()
+	var coin_positions := [
+		Vector2(420, 540), Vector2(560, 500), Vector2(740, 455), Vector2(940, 545),
+		Vector2(1080, 425), Vector2(1250, 385), Vector2(1410, 430), Vector2(1620, 550),
+		Vector2(1860, 500), Vector2(2060, 375), Vector2(2230, 340), Vector2(2400, 395),
+		Vector2(2590, 530), Vector2(2790, 490), Vector2(3010, 455), Vector2(3220, 455),
+		Vector2(3400, 520), Vector2(3640, 560), Vector2(3880, 520), Vector2(4120, 465),
+		Vector2(4340, 355), Vector2(4510, 350), Vector2(4680, 385), Vector2(4900, 540),
+		Vector2(5140, 500), Vector2(5380, 455), Vector2(5600, 430), Vector2(5780, 470),
+		Vector2(6020, 540), Vector2(6280, 515), Vector2(6530, 480), Vector2(6790, 445),
+		Vector2(7040, 535), Vector2(7280, 500), Vector2(7520, 465)
+	]
+	for p in coin_positions:
 		var c = COIN_SCENE.instantiate()
 		c.add_to_group("coins")
-		var x := 320 + i * 72
-		var y := 500
-		if i % 10 in [3, 4, 5]:
-			y = 440
-		c.position = Vector2(x, y)
+		c.position = p
 		coins_root.add_child(c)
 		c.picked.connect(_on_coin_picked)
+
+func _spawn_enemies() -> void:
+	var enemies_root := $Enemies
+	for child in enemies_root.get_children():
+		child.queue_free()
+	var enemy_positions := [
+		Vector2(920, 590), Vector2(1710, 590), Vector2(2790, 590), Vector2(3980, 590),
+		Vector2(1090, 450), Vector2(2140, 385), Vector2(4360, 400), Vector2(5620, 440), Vector2(7200, 590)
+	]
+	for p in enemy_positions:
+		var enemy := ENEMY_SCENE.instantiate()
+		enemy.position = p
+		enemies_root.add_child(enemy)
+
+func _setup_platform_visuals() -> void:
+	if not ResourceLoader.exists("res://assets/platform.png"):
+		return
+	var tex := load("res://assets/platform.png") as Texture2D
+	if tex == null:
+		return
+	for s in get_tree().get_nodes_in_group("platform_sprite_targets"):
+		if s is Sprite2D:
+			s.texture = tex
